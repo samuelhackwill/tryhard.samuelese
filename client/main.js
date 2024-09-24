@@ -1,7 +1,6 @@
 import { Template } from "meteor/templating";
 import { ReactiveVar } from "meteor/reactive-var";
 import { textArr } from "./textArr.js";
-import { Meteor } from "meteor/meteor";
 
 import "./main.html";
 
@@ -30,36 +29,35 @@ Template.bulle.onCreated(function helloOnCreated() {
   this.paragraphIndex = new ReactiveVar(0);
   this.sentenceIndex = new ReactiveVar(0);
   this.currentState = new ReactiveVar(States.INITIAL);
+  this.nextPhrase = new ReactiveVar();
+  this.text = new ReactiveVar("");
 
-  instance = Template.instance();
+  // the transition function won't work without a global. for some reason it can't *always* access the Template.instance(). Prob when getting called from an arrow function for some reason.
+  // LOOK MOM NO GLOBAL
+  // instance = Template.instance();
 });
 
 Template.bulle.onRendered(function () {
   element = document.getElementById("bulle");
   element.ontransitionend = () => {
-    transition(Events.BOX_ANIMATION_FINISHED);
+    transition(Events.BOX_ANIMATION_FINISHED, this);
   };
 });
 
 Template.bulle.helpers({
   openOrClosed() {
-    _ = Template.instance().currentState.get();
-    console.log("state:", _);
-    if (_ == "FINISHED" || _ == "INITIAL" || _ == "CLOSED") {
+    const state = Template.instance().currentState.get();
+    if (state == "FINISHED" || state == "INITIAL" || state == "CLOSED") {
       return "opacity-0";
     } else {
       return "opacity-1";
     }
   },
-  text() {
-    sentX = Template.instance().paragraphIndex.get();
-    parX = Template.instance().sentenceIndex.get();
-
-    return textArr.acte1[sentX][parX];
-  },
-
   state() {
     return Template.instance().currentState.get();
+  },
+  text() {
+    return Template.instance().text.get();
   },
 });
 
@@ -77,28 +75,84 @@ Template.bulle.events({
 //   }
 // };
 
-function transition(event) {
+function transition(event, facultativeContext) {
+  let instance = null;
+
+  // on est ammenés à appeler cette fonction depuis des contextes différents, et dans certains cas on a pas accès à Template.instance() donc il faut le récupérer dans les arguments de la fonction t'as vu
+  if (facultativeContext) {
+    instance = facultativeContext;
+  } else {
+    instance = Template.instance();
+  }
+
   switch (instance.currentState.get()) {
     case "INITIAL":
       if (event === Events.CLICK) {
         instance.currentState.set(States.OPENING);
-        onEnterOpening();
+        onEnterOpening(instance);
       }
       break;
 
     case "OPENING":
       if (event === Events.BOX_ANIMATION_FINISHED) {
-        instance.currentState.set(States.OPEN);
-        onEnterOpen();
+        instance.currentState.set(States.WRITING);
+        onEnterWriting(instance);
       }
       break;
+
+    case "WRITING":
+      if (event === Events.END_OF_SENTENCE) {
+        instance.currentState.set(States.COMPLETE);
+        onEnterComplete(instance);
+      }
   }
 }
 
-onEnterOpening = function () {
-  // console.log("prout");
+onEnterOpening = function (instance) {
+  sentX = instance.paragraphIndex.get();
+  parX = instance.sentenceIndex.get();
+  instance.nextPhrase.set(textArr.acte1[sentX][parX]);
 };
 
-onEnterOpen = function () {
-  // console.log("waiting further orders");
+onEnterWriting = function (instance) {
+  console.log(instance.nextPhrase.get());
+  startAnimating(instance);
+};
+
+onEnterInitial = function () {
+  element = document.getElementById("bulle");
+  element.ontransitionend = () => {
+    transition(Events.BOX_ANIMATION_FINISHED, this);
+  };
+};
+
+onEnterComplete = function () {
+  console.log("waiting click.");
+};
+
+startAnimating = function (instance) {
+  index = 0;
+  millisecondsPerLetter = 30;
+  lastLetterIndex = instance.nextPhrase.get().length;
+
+  prout = Meteor.setInterval(() => {
+    if (index == lastLetterIndex - 1) {
+      Meteor.clearInterval(prout);
+
+      // please note that the last letter of the text will
+      // appear AFTER the transition fires. that may or may not
+      // be good for us.
+      transition(Events.END_OF_SENTENCE, instance);
+    }
+
+    nextLetter = instance.nextPhrase.get()[0];
+    oldText = instance.text.get();
+    newText = oldText + nextLetter;
+    instance.text.set(newText);
+
+    instance.nextPhrase.set(instance.nextPhrase.get().substring(1));
+
+    console.log("prout", oldText.substring(1));
+    index++;
+  }, millisecondsPerLetter);
 };

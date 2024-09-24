@@ -1,7 +1,7 @@
 export const textArr = {
   acte1: [
     [
-      "salut ducon! je m'appelle proutos et je vais te guider dans cette aventure.",
+      "salut mon gros alors comment ça va? bienvenue dans ce prototype artisanal codé à la main par ce bon vieux samuel. On a peur. Peur de quoi? de la reactivité de Meteor qui va être mise à rude épreuve.",
       "mais avant toute chose n'hésite pas à chier partout gnagnangnagna, bonjour.",
       "voilà la première phrase est finie.",
     ],
