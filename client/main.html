@@ -1,0 +1,21 @@
+<head>
+  <title>tryhard.samuelese</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" type="text/css" href="./main.css" />
+</head>
+
+<body>
+  {{> bulle}}
+</body>
+
+<template name="bulle">
+  <div
+    class="bulleContainer absolute flex h-full w-full items-center justify-center border border-red-600"
+  >
+    <div
+      class="w-1/2 rounded-xl select-none bg-sky-100 p-16 text-4xl shadow-2xl transition-all {{openOrClosed}}"
+    >
+      {{text}}
+    </div>
+  </div>
+</template>
