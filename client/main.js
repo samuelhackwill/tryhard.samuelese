@@ -1,6 +1,7 @@
 import { Template } from "meteor/templating";
 import { ReactiveVar } from "meteor/reactive-var";
 import { textArr } from "./textArr.js";
+import { Meteor } from "meteor/meteor";
 
 import "./main.html";
 
@@ -26,12 +27,30 @@ const Events = {
 };
 
 Template.bulle.onCreated(function helloOnCreated() {
-  this.open = new ReactiveVar(false);
   this.paragraphIndex = new ReactiveVar(0);
   this.sentenceIndex = new ReactiveVar(0);
+  this.currentState = new ReactiveVar(States.INITIAL);
+
+  instance = Template.instance();
+});
+
+Template.bulle.onRendered(function () {
+  element = document.getElementById("bulle");
+  element.ontransitionend = () => {
+    transition(Events.BOX_ANIMATION_FINISHED);
+  };
 });
 
 Template.bulle.helpers({
+  openOrClosed() {
+    _ = Template.instance().currentState.get();
+    console.log("state:", _);
+    if (_ == "FINISHED" || _ == "INITIAL" || _ == "CLOSED") {
+      return "opacity-0";
+    } else {
+      return "opacity-1";
+    }
+  },
   text() {
     sentX = Template.instance().paragraphIndex.get();
     parX = Template.instance().sentenceIndex.get();
@@ -39,34 +58,47 @@ Template.bulle.helpers({
     return textArr.acte1[sentX][parX];
   },
 
-  openOrClosed() {
-    console.log(Template.instance().open.get());
-
-    if (Template.instance().open.get() === true) {
-      return "opacity-1";
-    } else {
-      return "opacity-0";
-    }
+  state() {
+    return Template.instance().currentState.get();
   },
 });
 
 Template.bulle.events({
-  "click .bulleContainer"(event, instance) {
-    // ON CLICK :
-    // si la fenetre est fermée, ouvre la fenetre, puis quand elle est ouverte lance l'animation où les lettres du texte s'ouvrent les unes après les autres
-    // si une animation de texte ou une animation de bulle est en cours, met toutes les animations dans leur état terminé et affiche l'intégralité du texte.
-    // si on est arrivé à la fin d'un texte, lance le prochain texte (ou ferme la fenetre si c'était la derniere phrase du paragraphe)
-
-    console.log(textArr.acte1[sentX].length);
-
-    openBulle(instance);
+  "click #bulleContainer"(event, instance) {
+    transition("CLICK");
   },
 });
 
-openBulle = function (instance) {
-  if (instance.open.get() === false) {
-    instance.open.set(true);
-  } else {
-    instance.open.set(false);
+// openBulle = function (instance) {
+//   if (instance.open.get() === false) {
+//     instance.open.set(true);
+//   } else {
+//     instance.open.set(false);
+//   }
+// };
+
+function transition(event) {
+  switch (instance.currentState.get()) {
+    case "INITIAL":
+      if (event === Events.CLICK) {
+        instance.currentState.set(States.OPENING);
+        onEnterOpening();
+      }
+      break;
+
+    case "OPENING":
+      if (event === Events.BOX_ANIMATION_FINISHED) {
+        instance.currentState.set(States.OPEN);
+        onEnterOpen();
+      }
+      break;
   }
+}
+
+onEnterOpening = function () {
+  // console.log("prout");
+};
+
+onEnterOpen = function () {
+  // console.log("waiting further orders");
 };
