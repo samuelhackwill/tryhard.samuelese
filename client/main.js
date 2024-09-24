@@ -21,8 +21,9 @@ const Events = {
   CLICK: "CLICK",
   BOX_ANIMATION_FINISHED: "ANIMATION_BOX_FINISHED",
   END_OF_SENTENCE: "END_OF_SENTENCE",
-  TEXT_ANIMATION_FINISHED: "TEXT_ANIMATION_FINISHED",
   END_OF_PARAGRAPH: "END_OF_PARAGRAPH",
+  EVENT_LISTENER_ADDED: "EVENT_LISTENER_ADDED",
+  TEXT_ANIMATION_FINISHED: "TEXT_ANIMATION_FINISHED",
 };
 
 Template.bulle.onCreated(function helloOnCreated() {
@@ -38,10 +39,7 @@ Template.bulle.onCreated(function helloOnCreated() {
 });
 
 Template.bulle.onRendered(function () {
-  element = document.getElementById("bulle");
-  element.ontransitionend = () => {
-    transition(Events.BOX_ANIMATION_FINISHED, this);
-  };
+  onEnterInitial(this);
 });
 
 Template.bulle.helpers({
@@ -101,17 +99,72 @@ function transition(event, facultativeContext) {
       break;
 
     case "WRITING":
-      if (event === Events.END_OF_SENTENCE) {
+      if (event === Events.END_OF_SENTENCE || event === Events.CLICK) {
         instance.currentState.set(States.COMPLETE);
         onEnterComplete(instance);
       }
+      break;
+
+    case "COMPLETE":
+      if (event === Events.CLICK) {
+        parX = instance.paragraphIndex.get();
+        sentX = instance.sentenceIndex.get();
+
+        // console.log(sentX);
+        // console.log("paragraph length ", textArr.acte1[parX].length - 1);
+
+        if (sentX >= textArr.acte1[parX].length - 1) {
+          instance.currentState.set(States.CLOSING);
+          onEnterClosing(instance);
+        } else {
+          instance.currentState.set(States.OPEN);
+          onEnterOpen(instance);
+        }
+      }
+      break;
+
+    case "OPEN":
+      if (event === Events.END_OF_PARAGRAPH) {
+        instance.currentState.set(States.WRITING);
+        onEnterWriting(instance);
+      }
+
+      break;
+
+    case "CLOSING":
+      if (event === Events.EVENT_LISTENER_ADDED) {
+        instance.currentState.set(States.CLOSED);
+        onEnterClosed(instance);
+      }
+      break;
+
+    case "CLOSED":
+      if (event === Events.CLICK) {
+        parX = instance.paragraphIndex.get();
+        if (parX >= textArr.acte1.length - 1) {
+          instance.currentState.set(States.FINISHED);
+          onEnterFinished(instance);
+        } else {
+          instance.currentState.set(States.OPENING);
+          onEnterOpening(instance);
+        }
+      }
+      break;
+
+    case "FINISHED":
+      if (event === Events.CLICK) {
+        alert("Text is finished mate. You can restart if you want");
+        instance.currentState.set(States.INITIAL);
+        onEnterInitial(instance);
+      }
+      break;
   }
 }
 
 onEnterOpening = function (instance) {
-  sentX = instance.paragraphIndex.get();
-  parX = instance.sentenceIndex.get();
-  instance.nextPhrase.set(textArr.acte1[sentX][parX]);
+  parX = instance.paragraphIndex.get();
+  sentX = instance.sentenceIndex.get();
+  instance.nextPhrase.set(textArr.acte1[parX][sentX]);
 };
 
 onEnterWriting = function (instance) {
@@ -119,30 +172,82 @@ onEnterWriting = function (instance) {
   startAnimating(instance);
 };
 
-onEnterInitial = function () {
+onEnterInitial = function (instance) {
+  parX = instance.paragraphIndex.set(0);
+  sentX = instance.sentenceIndex.set(0);
+
   element = document.getElementById("bulle");
   element.ontransitionend = () => {
-    transition(Events.BOX_ANIMATION_FINISHED, this);
+    transition(Events.BOX_ANIMATION_FINISHED, instance);
   };
 };
 
-onEnterComplete = function () {
-  console.log("waiting click.");
+onEnterComplete = function (instance) {
+  Meteor.clearInterval(prout);
+
+  restOfTheText = instance.nextPhrase.get();
+
+  console.log(restOfTheText);
+
+  oldText = instance.text.get();
+  newText = oldText + restOfTheText;
+  instance.text.set(newText);
+};
+
+onEnterClosing = function (instance) {
+  element = document.getElementById("bulle");
+
+  element.ontransitionend = () => {
+    transition(Events.BOX_ANIMATION_FINISHED, this);
+  };
+
+  transition(Events.EVENT_LISTENER_ADDED, instance);
+};
+
+onEnterClosed = function (instance) {
+  element = document.getElementById("bulle");
+  element.ontransitionend = () => {
+    transition(Events.BOX_ANIMATION_FINISHED, instance);
+  };
+
+  instance.text.set("");
+
+  parX = instance.paragraphIndex.get() + 1;
+
+  instance.sentenceIndex.set(0);
+
+  instance.paragraphIndex.set(parX);
+};
+
+onEnterOpen = function (instance) {
+  instance.sentenceIndex.set(instance.sentenceIndex.get() + 1);
+
+  sentX = instance.paragraphIndex.get();
+  parX = instance.sentenceIndex.get();
+  instance.nextPhrase.set(textArr.acte1[sentX][parX]);
+
+  instance.text.set("");
+
+  transition(Events.END_OF_PARAGRAPH, instance);
+};
+
+onEnterFinished = function (instance) {
+  console.log("waiting for click");
 };
 
 startAnimating = function (instance) {
   index = 0;
-  millisecondsPerLetter = 30;
+  millisecondsPerLetter = 50;
   lastLetterIndex = instance.nextPhrase.get().length;
 
   prout = Meteor.setInterval(() => {
     if (index == lastLetterIndex - 1) {
-      Meteor.clearInterval(prout);
-
       // please note that the last letter of the text will
-      // appear AFTER the transition fires. that may or may not
-      // be good for us.
+      // be fired by the onEnterComplete function. Why is that?
+      // because we also want it to be able to print everything
+      // d'un coup on click.
       transition(Events.END_OF_SENTENCE, instance);
+      return;
     }
 
     nextLetter = instance.nextPhrase.get()[0];
