@@ -8,8 +8,8 @@ import { textArr } from "../textArr.js"
 const States = {
   INITIAL: "INITIAL",
   WRITING: "WRITING",
-  CHECKING_TRIGRAMME: "CHECKING_TRIGRAMME",
-  CHECKING_DIGRAMME: "CHECKING_DIGRAMME",
+  // CHECKING_TRIGRAMME: "CHECKING_TRIGRAMME",
+  // CHECKING_DIGRAMME: "CHECKING_DIGRAMME",
   PRINTING_LETTER: "PRINTING_LETTER",
   COMPLETE: "COMPLETE",
   FINISHED: "FINISHED",
@@ -29,15 +29,6 @@ Template.lettreur.onCreated(function helloOnCreated() {
   this.nextPhrase = new ReactiveVar("")
   this.text = new ReactiveVar("")
   onEnterInitial(this)
-
-  // the transition function won't work without a global. for some reason it can't *always* access the Template.instance(). Prob when getting called from an arrow function for some reason.
-  // ah et puis en fait LOOK MOM NO GLOBAL
-  // instance = Template.instance();
-})
-
-Template.lettreur.onDestroyed(function () {
-  console.log("DESTROYING EVENT LISTENER")
-  $("body").off("click.lettreur")
 })
 
 Template.lettreur.onRendered(function () {
@@ -71,16 +62,22 @@ Template.lettreur.onRendered(function () {
   })
 })
 
-const transition = function (event, facultativeContext) {
-  // console.log("lettreur transition !", event, facultativeContext)
-  let instance = null
+Template.lettreur.helpers({
+  state() {
+    return Template.instance().currentState.get()
+  },
+  text() {
+    return Template.instance().text.get()
+  },
+})
 
-  // on est ammenés à appeler cette fonction depuis des contextes différents, et dans certains cas on a pas accès à Template.instance() donc il faut le récupérer dans les arguments de la fonction t'as vu
-  if (facultativeContext) {
-    instance = facultativeContext
-  } else {
-    instance = Template.instance()
-  }
+Template.lettreur.onDestroyed(function () {
+  console.log("DESTROYING EVENT LISTENER")
+  $("body").off("click.lettreur")
+})
+
+const transition = function (event, instance) {
+  // console.log("lettreur transition !", event, facultativeContext)
 
   switch (instance.currentState.get()) {
     case "FINISHED":
@@ -120,12 +117,10 @@ const transition = function (event, facultativeContext) {
       break
     case "PRINTING_LETTER":
       if (event === Events.END_OF_LETTER) {
-        // console.log("end of letter mate, let's get the next one!")
         instance.currentState.set(States.WRITING)
         onEnterWriting(instance)
       }
       if (event === Events.END_OF_SENTENCE || event === Events.CLICK) {
-        // console.log("end of sentence mate, stop")
         instance.currentState.set(States.COMPLETE)
         onEnterComplete(instance)
       }
@@ -134,7 +129,6 @@ const transition = function (event, facultativeContext) {
 
     case "COMPLETE":
       if (event === Events.CLICK) {
-        // console.log("sentence complte! eiter closing the window or loading next sentence")
         parX = instance.paragraphIndex.get()
         sentX = instance.sentenceIndex.get()
 
@@ -146,7 +140,6 @@ const transition = function (event, facultativeContext) {
 
         if (sentX >= textArr.acte1[parX].length - 1) {
           instance.currentState.set(States.FINISHED)
-          // onEnterClosing(instance)
           GlobalEvent.set(GlobalEvents.END_OF_PARAGRAPH)
           return
         } else {
@@ -157,17 +150,6 @@ const transition = function (event, facultativeContext) {
       break
   }
 }
-
-Template.lettreur.helpers({
-  state() {
-    return Template.instance().currentState.get()
-  },
-  text() {
-    return Template.instance().text.get()
-  },
-})
-
-Template.bulle.events({})
 
 const onEnterComplete = function (instance) {
   restOfTheText = instance.nextPhrase.get()

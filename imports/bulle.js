@@ -13,30 +13,21 @@ const States = {
   INITIAL: "INITIAL",
   OPENING: "OPENING",
   OPEN: "OPEN",
-  // WRITING: "WRITING",
-  // COMPLETE: "COMPLETE",
   CLOSING: "CLOSING",
   CLOSED: "CLOSED",
-  FINISHED: "FINISHED",
+  FINISHED: "FINISHED", // this should probably not be the responsibility of this component, cause it doesn't have anything to do with the bulle! maybe move to main.js
 }
 
 const Events = {
   CLICK: "CLICK",
   BOX_ANIMATION_FINISHED: "ANIMATION_BOX_FINISHED",
   EVENT_LISTENER_ADDED: "EVENT_LISTENER_ADDED",
-  TEXT_ANIMATION_FINISHED: "TEXT_ANIMATION_FINISHED",
 }
 
 Template.bulle.onCreated(function helloOnCreated() {
-  this.paragraphIndex = new ReactiveVar(0)
-  this.sentenceIndex = new ReactiveVar(0)
+  this.paragraphIndex = new ReactiveVar(0) // this should probably be handled entirely by the lettreur, because in the current situation we're indexing a distinct paragraph Index for each component. not good! probablby
   this.currentState = new ReactiveVar(States.INITIAL)
-  this.nextPhrase = new ReactiveVar("")
   this.text = new ReactiveVar("")
-
-  // the transition function won't work without a global. for some reason it can't *always* access the Template.instance(). Prob when getting called from an arrow function for some reason.
-  // ah et puis en fait LOOK MOM NO GLOBAL
-  // instance = Template.instance();
 })
 
 Template.bulle.onRendered(function () {
@@ -49,7 +40,7 @@ Template.bulle.onRendered(function () {
       return
     } else {
       if (GlobalEvent.get() == GlobalEvents.END_OF_PARAGRAPH) {
-        // Respond to state changes in prout2
+        // when it's the end of a paragraph, we'd like to close the dialog.
         transition(GlobalEvents.END_OF_PARAGRAPH, this)
       }
     }
@@ -72,26 +63,18 @@ Template.bulle.helpers({
 
 Template.bulle.events({
   "click #bulleContainer"(event, instance) {
+    // we might want to use a consistent way of handling events, like in the lettreur component. (ie, attaching an event listener to body and destroying it when the component is destroyed.)
     transition("CLICK", instance)
   },
 })
 
-const transition = function (event, facultativeContext) {
-  let instance = null
+const transition = function (event, instance) {
   // console.log("bulle transition!", event, facultativeContext)
-
-  // on est ammenés à appeler cette fonction depuis des contextes différents, et dans certains cas on a pas accès à Template.instance() donc il faut le récupérer dans les arguments de la fonction t'as vu
-  if (facultativeContext) {
-    instance = facultativeContext
-  } else {
-    instance = Template.instance()
-  }
 
   switch (instance.currentState.get()) {
     case "INITIAL":
       if (event === Events.CLICK) {
         instance.currentState.set(States.OPENING)
-        // onEnterOpening(instance)
       }
       break
 
@@ -106,7 +89,6 @@ const transition = function (event, facultativeContext) {
       if (event === GlobalEvents.END_OF_PARAGRAPH) {
         onEnterClosing(instance)
         instance.currentState.set(States.CLOSING)
-        // instance.GlobalEvent.set(GlobalEvents.START_WRITING)
       }
 
       break
@@ -123,10 +105,8 @@ const transition = function (event, facultativeContext) {
         parX = instance.paragraphIndex.get()
         if (parX > textArr.acte1.length - 1) {
           instance.currentState.set(States.FINISHED)
-          onEnterFinished(instance)
         } else {
           instance.currentState.set(States.OPENING)
-          onEnterOpening(instance)
         }
       }
       break
@@ -142,15 +122,8 @@ const transition = function (event, facultativeContext) {
   }
 }
 
-const onEnterOpening = function (instance) {
-  // parX = instance.paragraphIndex.get()
-  // sentX = instance.sentenceIndex.get()
-  // instance.nextPhrase.set(textArr.acte1[parX][sentX])
-}
-
 const onEnterInitial = function (instance) {
   parX = instance.paragraphIndex.set(0)
-  sentX = instance.sentenceIndex.set(0)
 
   element = document.getElementById("bulle")
   element.ontransitionend = () => {
@@ -177,29 +150,11 @@ const onEnterClosed = function (instance) {
     transition(Events.BOX_ANIMATION_FINISHED, instance)
   }
 
-  instance.text.set("")
-
+  // we want to update the paragraph index to STAY IN SYNC with lettreur! this is probably bad! but maybe the alternative (more globals) is bad-er
   parX = instance.paragraphIndex.get() + 1
-
-  instance.sentenceIndex.set(0)
-
   instance.paragraphIndex.set(parX)
 }
 
 const onEnterOpen = function (instance) {
   GlobalEvent.set(GlobalEvents.START_WRITING)
-
-  // instance.sentenceIndex.set(instance.sentenceIndex.get() + 1)
-
-  // sentX = instance.paragraphIndex.get()
-  // parX = instance.sentenceIndex.get()
-  // instance.nextPhrase.set(textArr.acte1[sentX][parX])
-
-  // instance.text.set("")
-
-  // transition(Events.END_OF_PARAGRAPH, instance)
-}
-
-const onEnterFinished = function (instance) {
-  console.log("waiting for click")
 }
