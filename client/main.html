@@ -8,22 +8,3 @@
 <body>
   {{> bulle}}
 </body>
-
-<template name="bulle">
-  <div
-    class="absolute flex h-full w-full items-center justify-center border border-red-600"
-    id="bulleContainer"
-  >
-    <div
-      class="relative h-[20rem] w-[50rem] rounded-3xl select-none bg-sky-100 p-16  shadow-2xl transition-all duration-200 {{openOrClosed}}"
-      id="bulle"
-    >
-      <span class="text-4xl" id="text">{{text}}</span>
-    </div>
-  </div>
-
-  <span
-    class="fixed left-0 top-0 m-2 select-none rounded-md bg-amber-900 p-2 text-white"
-    >state : {{state}}</span
-  >
-</template>
