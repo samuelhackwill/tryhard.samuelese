@@ -7,7 +7,7 @@ import readline from "readline"
 // console.log("process.env.PWD ", process.env.PWD);
 // console.log("process.env ", process.env);
 
-const description = "The Stanley Parabaley dialog remixé avec animals crossing."
+const description = "Sorte de dialogue où on essaie de donner de l'expressivité au texte. Players vs Samuel-le-narrateur"
 
 WebApp.connectHandlers.use("/api/hello", (req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*") // Allow all origins (use specific domains for more security)
