@@ -138,7 +138,7 @@ const transition = function (event, instance) {
 
         instance.nextPhrase.set(textArr.acte1[parX][sentX])
 
-        if (sentX >= textArr.acte1[parX].length - 1) {
+        if (sentX >= textArr.acte1[parX].length) {
           instance.currentState.set(States.FINISHED)
           GlobalEvent.set(GlobalEvents.END_OF_PARAGRAPH)
           return
@@ -173,7 +173,7 @@ const onEnterInitial = function (instance) {
 const onEnterWriting = function (instance) {
   Meteor.setTimeout(() => {
     transition(Events.WAIT_END, instance)
-  }, 35)
+  }, 5)
 }
 
 const onEnterPrinting_Letter = function (instance) {

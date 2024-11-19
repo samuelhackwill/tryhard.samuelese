@@ -1,7 +1,8 @@
 import { WebApp } from "meteor/webapp"
-import fs from "fs"
 import path from "path"
 import readline from "readline"
+
+import "./parser.js"
 
 // console.log("assets absoluteFilePath", filePath);
 // console.log("process.env.PWD ", process.env.PWD);
@@ -15,4 +16,9 @@ WebApp.connectHandlers.use("/api/hello", (req, res, next) => {
 
   res.write(description)
   res.end()
+})
+
+Meteor.startup(async () => {
+  const parsedContent = parseMarkdown(Assets.absoluteFilePath("text.md"))
+  console.log(parsedContent)
 })
